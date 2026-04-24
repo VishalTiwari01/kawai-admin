@@ -36,8 +36,8 @@ const ProductDetail = () => {
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // const baseUrl = "https://kawaiworld-nkppi.ondigitalocean.app/api";
-  const localBaseUrl = "http://localhost:1209/api";
+  const localBaseUrl = "https://kawaiworld-nkppi.ondigitalocean.app/api";
+  // const localBaseUrl = "http://localhost:1209/api";
   useEffect(() => {
     const fetch = async () => {
       try {
