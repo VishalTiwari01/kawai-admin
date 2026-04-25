@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,7 +109,7 @@ export const ProductForm = ({
   const [uploadingVariantVideoIndex, setUploadingVariantVideoIndex] = useState<
     number | null
   >(null);
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [], isLoading: isCategoriesLoading } = useQuery({
     queryKey: ["categories-tree"],
     queryFn: getCategoryTree,
   });
@@ -120,7 +120,7 @@ const flattenCategories = (categories: any[], level = 0) => {
 
   categories.forEach((cat) => {
     result.push({
-      _id: cat._id,
+      _id: String(cat._id), // Ensure ID is a string
       name: cat.name,
       level,
     });
@@ -133,7 +133,7 @@ const flattenCategories = (categories: any[], level = 0) => {
   return result;
 };
 
-const flatCategories = flattenCategories(categories);
+  const flatCategories = useMemo(() => flattenCategories(categories), [categories]);
 
   // API base URL
   const API_BASE_URL = "https://kawaiworld-nkppi.ondigitalocean.app/api";
@@ -144,13 +144,29 @@ const flatCategories = flattenCategories(categories);
   useEffect(() => {
     if (!variant) return;
 
+    // Robust categoryId extraction
+    let extractedCategoryId = "";
+    if (variant) {
+      const rawCat = variant.categoryId || (variant as any).category;
+      if (rawCat) {
+        if (typeof rawCat === "object") {
+          extractedCategoryId = String(rawCat._id || rawCat.id || "");
+        } else {
+          extractedCategoryId = String(rawCat);
+        }
+      }
+
+      // Fallback: if ID is still empty, try to find by name if we have it
+      // but we'll do this more thoroughly in a separate effect that waits for categories
+    }
+
     setFormData({
       _id: (variant as any)._id,
       id: (variant as any).id,
       name: variant.name ?? "",
       description: variant.description ?? "",
       shortDescription: variant.shortDescription ?? "",
-      categoryId: typeof variant.categoryId === 'object' ? (variant.categoryId as any)._id : (variant.categoryId ?? ""),
+      categoryId: extractedCategoryId,
       brand: variant.brand ?? "",
       isFeatured: variant.isFeatured ?? false,
       isActive: variant.isActive ?? true,
@@ -175,6 +191,35 @@ const flatCategories = flattenCategories(categories);
       })),
     });
   }, [variant]);
+
+  // Effect to sync category ID once categories are loaded or if variant changes
+  useEffect(() => {
+    if (!variant || flatCategories.length === 0) return;
+
+    setFormData((prev) => {
+      // If categoryId is already set and exists in flatCategories, don't change it
+      if (prev.categoryId && flatCategories.some(c => c._id === prev.categoryId)) {
+        return prev;
+      }
+
+      // Try to find matching category by name as a fallback
+      const catName = (variant as any).categoryName || 
+                     (typeof variant.categoryId === 'object' ? (variant.categoryId as any).name : null) ||
+                     ((variant as any).category && typeof (variant as any).category === 'object' ? (variant as any).category.name : null);
+      
+      if (catName) {
+        const found = flatCategories.find(
+          (c) => c.name.toLowerCase() === catName.toLowerCase()
+        );
+        if (found) {
+          console.log("Found category by name fallback:", found.name, found._id);
+          return { ...prev, categoryId: found._id };
+        }
+      }
+
+      return prev;
+    });
+  }, [flatCategories, variant]);
 
   // Handle main field changes
   const handleMainFieldChange = (
@@ -713,6 +758,7 @@ const flatCategories = flattenCategories(categories);
                   <Label htmlFor="categoryId">Category *</Label>
 
                   <Select
+                    key={flatCategories.length > 0 ? "loaded" : "loading"}
                     value={formData.categoryId ?? ""}
                     onValueChange={(value) =>
                       setFormData((prev) => ({
@@ -722,7 +768,7 @@ const flatCategories = flattenCategories(categories);
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select Category" />
+                      <SelectValue placeholder={isCategoriesLoading ? "Loading categories..." : "Select Category"} />
                     </SelectTrigger>
 
                     <SelectContent>
@@ -1043,7 +1089,7 @@ const flatCategories = flattenCategories(categories);
                         </div>
 
                         <div>
-                          <Label htmlFor="height">Height (kg)</Label>
+                          <Label htmlFor="height">Height (cm)</Label>
                           <Input
                             name="height"
                             type="number"
@@ -1056,7 +1102,7 @@ const flatCategories = flattenCategories(categories);
                         </div>
 
                         <div>
-                          <Label htmlFor="length">Length (kg)</Label>
+                          <Label htmlFor="length">Length (cm)</Label>
                           <Input
                             name="length"
                             type="number"
@@ -1069,7 +1115,7 @@ const flatCategories = flattenCategories(categories);
                         </div>
 
                         <div>
-                          <Label htmlFor="breadth">Breadth (kg)</Label>
+                          <Label htmlFor="breadth">Breadth (cm)</Label>
                           <Input
                             name="breadth"
                             type="number"
