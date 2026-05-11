@@ -109,6 +109,7 @@ export const ProductForm = ({
   const [uploadingVariantVideoIndex, setUploadingVariantVideoIndex] = useState<
     number | null
   >(null);
+  const [tagInput, setTagInput] = useState("");
   const { data: categories = [], isLoading: isCategoriesLoading } = useQuery({
     queryKey: ["categories-tree"],
     queryFn: getCategoryTree,
@@ -190,6 +191,7 @@ const flattenCategories = (categories: any[], level = 0) => {
         video: v.video ?? [],
       })),
     });
+    setTagInput((variant.tags ?? []).join(", "));
   }, [variant]);
 
   // Effect to sync category ID once categories are loaded or if variant changes
@@ -866,9 +868,10 @@ const flattenCategories = (categories: any[], level = 0) => {
                 <Label htmlFor="tags">Tags (comma separated)</Label>
                 <Input
                   id="tags"
-                  value={formData.tags.join(", ")}
+                  value={tagInput}
                   onChange={(e) => {
                     const val = e.target.value;
+                    setTagInput(val);
                     setFormData((prev) => ({
                       ...prev,
                       tags: val.split(",").map((t) => t.trim()).filter((t) => t !== ""),
