@@ -13,7 +13,7 @@ const Index = () => {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="text-center">
         <h1 className="mb-4 text-4xl font-bold">Redirecting to Admin Panel...</h1>
-        <p className="text-xl text-muted-foreground">Loading your product management dashboard</p>
+        <p className="text-xl text-muted-foreground">Loading your dashboard</p>
       </div>
     </div>
   );
